@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Motoros túra · Május 30–31 · 2 opció</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  :root{
+    --bg:#0f1419;--card:#161c24;--card2:#1c2430;--border:#2a3441;
+    --text:#e8eef5;--muted:#93a1b1;
+    --accent:#f97316;--accent-2:#0ea5e9;
+    --good:#22c55e;--warn:#eab308;--bad:#ef4444;
+    --opA:#22c55e;--opB:#0ea5e9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 80px}
+  header.hero{
+    background:linear-gradient(135deg,#1c2430 0%,#0f1419 60%),radial-gradient(circle at 20% 0%,rgba(249,115,22,.15),transparent 50%);
+    border:1px solid var(--border);border-radius:16px;padding:28px 28px 24px;margin-bottom:18px;position:relative;overflow:hidden
+  }
+  header.hero::before{content:"";position:absolute;right:-40px;top:-40px;width:220px;height:220px;background:radial-gradient(circle,rgba(14,165,233,.2),transparent 70%);border-radius:50%}
+  .eyebrow{color:var(--accent);font-size:12px;letter-spacing:.15em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
+  h1{margin:0 0 6px;font-size:30px;line-height:1.15;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:15px;margin-bottom:16px}
+  .dates{display:inline-flex;gap:6px;align-items:center;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.3);color:#fed7aa;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600}
+
+  /* Option switch */
+  .switch{display:flex;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:6px;margin-bottom:18px;position:sticky;top:8px;z-index:50;backdrop-filter:blur(8px)}
+  .switch button{
+    flex:1;background:transparent;color:var(--muted);border:none;padding:14px 16px;border-radius:8px;cursor:pointer;
+    font-family:inherit;font-size:14px;font-weight:600;display:flex;flex-direction:column;gap:2px;align-items:flex-start;
+    transition:all .2s
+  }
+  .switch button:hover{background:var(--card2);color:var(--text)}
+  .switch button.active[data-opt="A"]{background:rgba(34,197,94,.15);color:#86efac;box-shadow:inset 0 0 0 1px rgba(34,197,94,.35)}
+  .switch button.active[data-opt="B"]{background:rgba(14,165,233,.15);color:#7dd3fc;box-shadow:inset 0 0 0 1px rgba(14,165,233,.35)}
+  .switch button small{font-weight:400;font-size:11px;color:var(--muted);opacity:.8}
+
+  .summary{display:none;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-bottom:16px}
+  .summary.active{display:block}
+  .summary.A{border-left:4px solid var(--opA)}
+  .summary.B{border-left:4px solid var(--opB)}
+  .summary h2{margin:0 0 8px;font-size:18px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
+  .kpi{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .kpi .value{font-size:18px;font-weight:600;margin-top:2px}
+  .kpi .value small{font-size:12px;color:var(--muted);font-weight:400}
+
+  /* Collapsible sections */
+  details.sec{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;
+    overflow:hidden;transition:border-color .2s
+  }
+  details.sec[open]{border-color:#3a485a}
+  details.sec > summary{
+    cursor:pointer;list-style:none;padding:16px 20px;font-size:16px;font-weight:600;
+    display:flex;align-items:center;gap:10px;user-select:none
+  }
+  details.sec > summary::-webkit-details-marker{display:none}
+  details.sec > summary::after{
+    content:"▾";margin-left:auto;color:var(--muted);font-size:12px;transition:transform .2s
+  }
+  details.sec[open] > summary::after{transform:rotate(180deg)}
+  details.sec > summary:hover{background:var(--card2)}
+  details.sec > .body{padding:0 20px 20px}
+  details.sec > summary .icon{font-size:18px}
+  details.sec > summary .hint{font-weight:400;color:var(--muted);font-size:13px;margin-left:8px}
+  details.sec.opt-A{border-top:3px solid var(--opA)}
+  details.sec.opt-B{border-top:3px solid var(--opB)}
+
+  .opt-only{display:none}
+  body.mode-A .opt-A{display:block}
+  body.mode-B .opt-B{display:block}
+  body.mode-A .only-B{display:none}
+  body.mode-B .only-A{display:none}
+
+  .lead{color:var(--muted);font-size:13px;margin-bottom:14px}
+  #map{height:500px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#0b0f14}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:13px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{display:inline-block;width:14px;height:4px;border-radius:2px}
+  .legend i.d1{background:#0ea5e9}
+  .legend i.d2{background:#f97316}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:780px){.grid-2{grid-template-columns:1fr}}
+  .day-card{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative}
+  .day-card.d1{border-left:4px solid #0ea5e9}
+  .day-card.d2{border-left:4px solid #f97316}
+  .day-card h3{margin:0 0 2px;font-size:16px}
+  .day-card .when{color:var(--muted);font-size:12px;margin-bottom:12px}
+  .day-stats{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+  .day-stats div{font-size:12px;color:var(--muted)}
+  .day-stats strong{color:var(--text);display:block;font-size:14px}
+  ol.route{margin:0;padding:0;list-style:none;counter-reset:step}
+  ol.route li{position:relative;padding:8px 0 8px 32px;border-bottom:1px dashed var(--border);counter-increment:step;font-size:13px}
+  ol.route li:last-child{border-bottom:none}
+  ol.route li::before{
+    content:counter(step);position:absolute;left:0;top:7px;width:22px;height:22px;border-radius:50%;
+    background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:600;color:var(--muted)
+  }
+  ol.route li .place{font-weight:600}
+  ol.route li .meta{font-size:11px;color:var(--muted);margin-top:1px}
+  .tag{display:inline-block;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:2px 7px;font-size:10px;color:var(--muted);margin-left:6px;vertical-align:1px}
+  .tag.fuel{color:#fbbf24;border-color:#78350f}
+  .tag.border{color:#a78bfa;border-color:#4c1d95}
+  .tag.view{color:#34d399;border-color:#064e3b}
+  .tag.food{color:#f472b6;border-color:#831843}
+  .tag.sleep{color:#fb923c;border-color:#7c2d12}
+
+  .check{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+  @media (max-width:640px){.check{grid-template-columns:1fr}}
+  .check li{display:flex;gap:10px;align-items:flex-start;padding:5px 0;font-size:13px}
+  .check input[type=checkbox]{margin-top:3px;accent-color:var(--accent);transform:scale(1.1)}
+  .check label{cursor:pointer}
+  .check label.checked{color:var(--muted);text-decoration:line-through}
+  .check .cat{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-top:12px;font-weight:600;padding-bottom:4px;border-bottom:1px solid var(--border)}
+
+  .weather{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+  .wx{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .wx .d{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+  .wx .t{font-size:22px;font-weight:600;margin:4px 0}
+  .wx .r{color:var(--muted);font-size:12px}
+  .alert{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#fde68a;margin-top:10px}
+  .alert b{color:#fef08a}
+  .risk{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .risk div{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .risk div h4{margin:0 0 4px;font-size:13px}
+  .risk div p{margin:0;font-size:12px;color:var(--muted)}
+  .risk div.high{border-left:3px solid var(--bad)}
+  .risk div.med{border-left:3px solid var(--warn)}
+  .risk div.low{border-left:3px solid var(--good)}
+  .next{list-style:none;padding:0;margin:0}
+  .next li{padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start;font-size:13px}
+  .next li .n{width:22px;height:22px;border-radius:6px;background:var(--accent);color:#1a0f00;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:12px}
+  .next li em{color:var(--muted);font-style:normal;display:block;margin-top:2px;font-size:11px}
+  a{color:var(--accent-2)}
+  a:hover{color:#7dd3fc}
+  .btn{display:inline-block;background:var(--accent);color:#1a0f00;padding:7px 12px;border-radius:8px;text-decoration:none;font-weight:600;font-size:12px;margin-top:6px;margin-right:6px}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .btn:hover{opacity:.9}
+  footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 0 0}
+  .progress{background:var(--card2);border:1px solid var(--border);border-radius:8px;height:6px;margin-top:10px;overflow:hidden}
+  .progress .bar{height:100%;background:var(--accent);width:0;transition:width .3s}
+  .pcount{font-size:11px;color:var(--muted);margin-top:4px}
+  .expand-all{display:flex;gap:8px;margin-bottom:10px;justify-content:flex-end}
+  .expand-all button{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit}
+  .expand-all button:hover{color:var(--text);background:var(--card2)}
+</style>
+</head>
+<body class="mode-B">
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Motoros túra · Zsolt + Zsolt + Péter (3 fő megerősített)</div>
+  <h1>2 terv a május végi túrára</h1>
+  <div class="sub">Opció A: magyar szerpentinek Lillafüredig · Opció B: szlovákiai loop Salgótarjánba. Válassz, és a szekciók az adott opcióra frissülnek.</div>
+  <span class="dates">🗓 2026. május 30–31. (szombat–vasárnap)</span>
+</header>
+
+<!-- Option Switch -->
+<div class="switch" role="tablist">
+  <button class="opt-btn" data-opt="A">
+    <span>🇭🇺 Opció A — Lillafüred</span>
+    <small>Cserhát → Mátra → Bükk · Peti Google Maps útja</small>
+  </button>
+  <button class="opt-btn active" data-opt="B">
+    <span>🇸🇰 Opció B — Szlovákia ✅ Zsolt preferált</span>
+    <small>Felvidék szerpentin · KISKULACS Salgótarján</small>
+  </button>
+</div>
+
+<div class="expand-all">
+  <button onclick="toggleAll(true)">▾ Mindent kinyit</button>
+  <button onclick="toggleAll(false)">▴ Mindent bezár</button>
+</div>
+
+<!-- Summary A -->
+<div class="summary A" id="sum-A">
+  <h2>🇭🇺 Opció A — Diósd → Lillafüred → Diósd</h2>
+  <p class="lead">Peti eredeti javaslata (Google Maps útvonal). Cserhát + Mátra + Bükk átvonulás, teljesen magyarországi útvonal, nincs határátkelés.</p>
+  <div class="kpis">
+    <div class="kpi"><div class="label">Nap 1</div><div class="value">~250 <small>km</small></div></div>
+    <div class="kpi"><div class="label">Nap 2</div><div class="value">~230 <small>km</small></div></div>
+    <div class="kpi"><div class="label">Összesen</div><div class="value">~480 <small>km</small></div></div>
+    <div class="kpi"><div class="label">Menetidő</div><div class="value">~9 <small>h</small></div></div>
+    <div class="kpi"><div class="label">Szállás</div><div class="value">Lillafüred</div></div>
+    <div class="kpi"><div class="label">Országok</div><div class="value">HU</div></div>
+  </div>
+</div>
+
+<!-- Summary B -->
+<div class="summary B active" id="sum-B">
+  <h2>🇸🇰 Opció B — Diósd → Szlovákia → Diósd</h2>
+  <p class="lead">Peti 2. javaslata (ezt preferálod). Szlovák szerpentinek (Banská Štiavnica, Zvolen, Besztercebánya), komolyabb motoros élmény, UNESCO városok.</p>
+  <div class="kpis">
+    <div class="kpi"><div class="label">Nap 1</div><div class="value">291 <small>km · 5:21</small></div></div>
+    <div class="kpi"><div class="label">Nap 2</div><div class="value">273 <small>km · 4:53</small></div></div>
+    <div class="kpi"><div class="label">Összesen</div><div class="value">564 <small>km</small></div></div>
+    <div class="kpi"><div class="label">Menetidő</div><div class="value">10:14 <small>h</small></div></div>
+    <div class="kpi"><div class="label">Szállás</div><div class="value">KISKULACS</div></div>
+    <div class="kpi"><div class="label">Országok</div><div class="value">HU + SK</div></div>
+  </div>
+</div>
+
+<!-- SHARED: Csapat -->
+<details class="sec" open>
+  <summary><span class="icon">🏍</span> Csapat és motorok <span class="hint">· mindkét opcióhoz</span></summary>
+  <div class="body">
+    <div class="grid-2">
+      <div class="day-card" style="border-left:4px solid #22c55e">
+        <h3>✅ Megerősítve — 3 fő</h3>
+        <ol class="route" style="margin-top:6px">
+          <li><div class="place">Zsolt (1)</div><div class="meta">Motor: ? — (töltsd ki)</div></li>
+          <li><div class="place">Zsolt (2)</div><div class="meta">Motor: ? — (töltsd ki)</div></li>
+          <li><div class="place">Péter</div><div class="meta">Motor: ? — (töltsd ki)</div></li>
+        </ol>
+      </div>
+      <div class="day-card" style="border-left:4px solid #eab308">
+        <h3>⏳ Még nem erősítettek vissza</h3>
+        <p style="color:var(--muted);font-size:13px;margin:6px 0">Érdemes <b>jövő hét elejéig</b> összetrombitálni őket, hogy a szállást véglegesíteni tudjuk.</p>
+        <div class="alert" style="margin-top:10px">
+          <b>Döntési pont</b> — 3 fő vs. 5 fő jelentős különbség a szállás foglalásnál.
+        </div>
+      </div>
+    </div>
+    <details style="margin-top:12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+      <summary style="cursor:pointer;font-weight:600;font-size:13px">Ismert flotta (régi tervből)</summary>
+      <ul style="color:var(--muted);font-size:13px;margin-top:8px">
+        <li><b>Triumph Tiger 800XC</b> — 19L tank, túrabarát, szerpentinre kiváló, ~300 km hatótáv</li>
+        <li><b>Ducati Scrambler</b> — ~13.5L tank, ~220-250 km hatótáv → <b>gyakrabban kell tankolni!</b></li>
+        <li>További motorok — csapat véglegesítés után pontosítani</li>
+      </ul>
+    </details>
+    <div class="alert"><b>Tempó szabály</b> — max. 3 óra motorozás egyhuzamban (régi tervből). Mindkét opció kezeli: Nap 1-ben természetes ebéd/kávé pihenő.</div>
+  </div>
+</details>
+
+<!-- MAP (shared container, route rerendered) -->
+<details class="sec" open>
+  <summary><span class="icon">🗺</span> Interaktív útvonal térkép <span class="hint">· <span id="mode-label">Opció B</span></span></summary>
+  <div class="body">
+    <div class="lead">Kék vonal = 1. nap · narancs = 2. nap. A markerek klikkelhetőek. Térkép zoom: kattints rá először.</div>
+    <div id="map"></div>
+    <div class="legend">
+      <span><i class="d1"></i> Nap 1</span>
+      <span><i class="d2"></i> Nap 2</span>
+      <span>📍 Checkpoint</span>
+      <span>⛽ Tankolás</span>
+      <span>🛂 Határ</span>
+      <span>🛏 Szállás</span>
+    </div>
+  </div>
+</details>
+
+<!-- OPT A: Nap 1 -->
+<details class="sec opt-only opt-A">
+  <summary><span class="icon">1️⃣</span> 1. nap — Diósd → Lillafüred <span class="hint">· ~250 km · ~5.5h motorozás</span></summary>
+  <div class="body">
+    <div class="day-card d1">
+      <div class="when">Indulás: ~08:00 Diósd · érkezés: ~15:30 Lillafüred (pihenőkkel ~7:30 h)</div>
+      <div class="day-stats">
+        <div><strong>~250 km</strong>menetidő ~5.5h</div>
+        <div><strong>Cserhát+Mátra+Bükk</strong>szerpentin sorozat</div>
+        <div><strong>1014 m</strong>legmagasabb pont (Kékestető)</div>
+      </div>
+      <ol class="route">
+        <li><div class="place">Diósd, Tengelic utca</div><div class="meta">Indulás, tankolás · 0 km</div></li>
+        <li><div class="place">Rád (Cserhát belépő)</div><div class="meta">M0 → 2-es főút → mellékutak · ~60 km</div></li>
+        <li><div class="place">Mohora</div><div class="meta">Cserhát belső, kanyargós · ~85 km</div></li>
+        <li><div class="place">Alsótold<span class="tag view">📸</span></div><div class="meta">Palócok falva, tájvédelmi körzet · ~110 km</div></li>
+        <li><div class="place">Pásztó<span class="tag fuel">⛽</span><span class="tag food">🍽</span></div><div class="meta">Ebédszünet, tankolás · ~125 km</div></li>
+        <li><div class="place">Galyatető (965 m)<span class="tag view">📸</span></div><div class="meta">Mátra 2. legmagasabb, kilátó · ~155 km</div></li>
+        <li><div class="place">Kékestető (1014 m)<span class="tag view">📸</span></div><div class="meta">Mo. legmagasabb pontja, TV-torony · ~170 km</div></li>
+        <li><div class="place">Recsk</div><div class="meta">Szépen tekerős út lefelé · ~190 km</div></li>
+        <li><div class="place">Felsőtárkány (Bükk kapu)<span class="tag view">📸</span></div><div class="meta">Bükk belépő · ~225 km</div></li>
+        <li><div class="place">Lillafüred — szállás<span class="tag sleep">🛏</span></div><div class="meta">Palotaszálló vagy alternatíva · 250 km</div></li>
+      </ol>
+    </div>
+  </div>
+</details>
+
+<!-- OPT A: Nap 2 -->
+<details class="sec opt-only opt-A">
+  <summary><span class="icon">2️⃣</span> 2. nap — Lillafüred → Diósd <span class="hint">· ~230 km · ~4.5h motorozás</span></summary>
+  <div class="body">
+    <div class="day-card d2">
+      <div class="when">Indulás: ~09:00 Lillafüred · érkezés: ~16:00 Diósd</div>
+      <div class="day-stats">
+        <div><strong>~230 km</strong>menetidő ~4.5h</div>
+        <div><strong>Bükk + Aggtelek</strong>opcionális kitérő</div>
+      </div>
+      <ol class="route">
+        <li><div class="place">Lillafüred (reggeli)</div><div class="meta">Palotaszálló terasz, Hámori-tó · 0 km</div></li>
+        <li><div class="place">Bükk észak (Jávorkút-Bánkút)<span class="tag view">📸</span></div><div class="meta">Erdei szerpentin · ~25 km</div></li>
+        <li><div class="place">Szilvásvárad (Lipicai ménes)<span class="tag view">📸</span></div><div class="meta">Opcionális megállás · ~60 km</div></li>
+        <li><div class="place">Eger<span class="tag food">🍽</span></div><div class="meta">Ebéd a várnál · ~95 km</div></li>
+        <li><div class="place">Gyöngyös<span class="tag fuel">⛽</span></div><div class="meta">Tankolás M3 előtt · ~130 km</div></li>
+        <li><div class="place">M3 → M0 → M7</div><div class="meta">Gyors autópálya visszaút · ~180 km</div></li>
+        <li><div class="place">Diósd — érkezés<span class="tag sleep">🏁</span></div><div class="meta">Cél elérve · ~230 km</div></li>
+      </ol>
+    </div>
+  </div>
+</details>
+
+<!-- OPT B: Nap 1 -->
+<details class="sec opt-only opt-B" open>
+  <summary><span class="icon">1️⃣</span> 1. nap — Diósd → KISKULACS (Salgótarján) <span class="hint">· 291 km · 5:21</span></summary>
+  <div class="body">
+    <div class="day-card d1">
+      <div class="when">Indulás: ~08:00 Diósd · érkezés: ~17:30 Salgótarján (pihenőkkel ~9:30 h)</div>
+      <div class="day-stats">
+        <div><strong>291 km</strong>menetidő 5:21</div>
+        <div><strong>~2/3 SK</strong>Felvidék szerpentinek</div>
+        <div><strong>1 határ</strong>Párkány/Šahy</div>
+      </div>
+      <ol class="route">
+        <li><div class="place">Diósd, indulás</div><div class="meta">Tanktöltés, bemelegítés</div></li>
+        <li><div class="place">Esztergom / Párkány<span class="tag border">🛂</span></div><div class="meta">Duna-híd, SK belépés · ~60 km</div></li>
+        <li><div class="place">Levice (Léva)<span class="tag fuel">⛽</span></div><div class="meta">Kávé, tankolás · ~110 km</div></li>
+        <li><div class="place">Banská Štiavnica (Selmecbánya)<span class="tag view">📸</span></div><div class="meta">UNESCO óváros · ~150 km</div></li>
+        <li><div class="place">Zvolen (Zólyom)</div><div class="meta">Szerpentinek · ~180 km</div></li>
+        <li><div class="place">Banská Bystrica (Besztercebánya)<span class="tag food">🍽</span></div><div class="meta">Ebéd ~13:30 · ~210 km</div></li>
+        <li><div class="place">Krupina (Korpona)<span class="tag fuel">⛽</span></div><div class="meta">Utolsó SK tankolás · ~240 km</div></li>
+        <li><div class="place">Balassagyarmat<span class="tag border">🛂</span></div><div class="meta">Vissza HU · ~265 km</div></li>
+        <li><div class="place">Salgótarján — KISKULACS<span class="tag sleep">🛏</span></div><div class="meta">Érkezés ~17:30 · 291 km</div></li>
+      </ol>
+    </div>
+  </div>
+</details>
+
+<!-- OPT B: Nap 2 -->
+<details class="sec opt-only opt-B" open>
+  <summary><span class="icon">2️⃣</span> 2. nap — Salgótarján → Diósd <span class="hint">· 273 km · 4:53</span></summary>
+  <div class="body">
+    <div class="day-card d2">
+      <div class="when">Indulás: ~09:00 Salgótarján · érkezés: ~16:30 Diósd</div>
+      <div class="day-stats">
+        <div><strong>273 km</strong>menetidő 4:53</div>
+        <div><strong>Mátra + Bükk</strong>magyar panoráma</div>
+      </div>
+      <ol class="route">
+        <li><div class="place">Salgótarján (reggeli)</div><div class="meta">Tankolás, kávé · 0 km</div></li>
+        <li><div class="place">Hollókő<span class="tag view">📸</span></div><div class="meta">UNESCO skanzen · ~30 km</div></li>
+        <li><div class="place">Kékestető<span class="tag view">📸</span></div><div class="meta">1014 m · ~70 km</div></li>
+        <li><div class="place">Eger<span class="tag food">🍽</span></div><div class="meta">Kávé, vár · ~120 km</div></li>
+        <li><div class="place">Lillafüred (opcionális)<span class="tag view">📸</span></div><div class="meta">Palotaszálló · ~165 km</div></li>
+        <li><div class="place">Gyöngyös<span class="tag fuel">⛽</span></div><div class="meta">Tankolás · ~200 km</div></li>
+        <li><div class="place">M3 → M0 → M7</div><div class="meta">Autópálya · ~260 km</div></li>
+        <li><div class="place">Diósd — érkezés<span class="tag sleep">🏁</span></div><div class="meta">273 km</div></li>
+      </ol>
+    </div>
+  </div>
+</details>
+
+<!-- OPT A: Szállás -->
+<details class="sec opt-only opt-A">
+  <summary><span class="icon">🛏</span> Szállás — Lillafüred <span class="hint">· Bükk szíve</span></summary>
+  <div class="body">
+    <div class="lead">Lillafüred klasszikus motoros úti cél, a Palotaszálló-val a csúcson. Május végén is érdemes előre foglalni, hétvégén telthet.</div>
+    <div class="grid-2">
+      <div class="day-card" style="border-left:4px solid #f59e0b">
+        <h3>⭐⭐⭐ Palota Hotel Lillafüred</h3>
+        <p style="font-size:12px;color:var(--muted)">Neoreneszánsz "Disney-kastély", 1930-as évekbeli elegancia<br>
+        <b>Cím:</b> 3517 Miskolc, Erzsébet sétány 1<br>
+        <b>Tel:</b> +36 46 331 411<br>
+        <b>Ár:</b> ~40-60 e Ft/szoba/éj (2 fő, reggelivel)<br>
+        <b>Motor parkolás:</b> zárt udvar</p>
+        <a class="btn" href="https://www.google.com/maps/search/?api=1&query=Palota+Hotel+Lillafüred" target="_blank">Google Maps ↗</a>
+      </div>
+      <div class="day-card" style="border-left:4px solid #64748b">
+        <h3>Alternatívák</h3>
+        <ul style="font-size:12px;color:var(--muted);padding-left:18px">
+          <li>Hotel Lidó Lillafüred (olcsóbb, ~20-30 e Ft)</li>
+          <li>Villa Ferenc panzió</li>
+          <li>Bükki Ökocentrum (egyszerűbb)</li>
+          <li>Miskolc centrum — ha Lillafüred telt (15 perc motorral)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</details>
+
+<!-- OPT B: Szállás -->
+<details class="sec opt-only opt-B" open>
+  <summary><span class="icon">🛏</span> Szállás — KISKULACS Salgótarján <span class="hint">· megerősítés szükséges Petivel</span></summary>
+  <div class="body">
+    <div class="lead">A név alapján legnagyobb valószínűséggel a salgótarjáni (nem a székesfehérvári — rossz irány Diósdtól). <b>Peti megerősítése szükséges!</b></div>
+    <div class="grid-2">
+      <div>
+        <p style="font-size:13px"><b>Cím:</b> 3100 Salgótarján, Kassai sor 40.<br>
+        <b>Tel:</b> +36 32 412 026<br>
+        <b>Típus:</b> vendéglő + szállás, motoros-barát<br>
+        <b>Távolság:</b> direkt 110 km, túraterven 291 km</p>
+        <a class="btn" href="https://www.google.com/maps/search/?api=1&query=KISKULACS+Salgótarján+Kassai+sor+40" target="_blank">Google Maps ↗</a>
+        <a class="btn ghost" href="https://www.tripadvisor.com/Restaurant_Review-g274906-d12786372-Reviews-Kiskulacs_Restaurant-Salgotarjan_Nograd_County_Northern_Hungary.html" target="_blank">Tripadvisor ↗</a>
+      </div>
+      <div>
+        <details open style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+          <summary style="cursor:pointer;font-weight:600;font-size:13px">Foglalási lépések</summary>
+          <ul style="font-size:12px;color:var(--muted);margin:8px 0 0;padding-left:18px">
+            <li>Telefon: +36 32 412 026 — 2026.05.30 éjszaka</li>
+            <li>3 fő biztos + opció 2 főre</li>
+            <li>Zárt motorparkolás?</li>
+            <li>Vacsona 18:00, reggeli 08:00-09:00</li>
+            <li>Előleg / letét?</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+  </div>
+</details>
+
+<!-- SHARED: Időjárás -->
+<details class="sec">
+  <summary><span class="icon">🌤</span> Időjárás · május 30–31 <span class="hint">· klimatológiai becslés</span></summary>
+  <div class="body">
+    <div class="lead">Pontos előrejelzés csak ~10 nappal előtte lesz megbízható. Május utolsó hétvégéjén változékony idő a norma.</div>
+    <div class="weather">
+      <div class="wx"><div class="d">Szombat nappal · alföld</div><div class="t">19–24 °C</div><div class="r">20-30% csapadék</div></div>
+      <div class="wx"><div class="d">Szombat · SK hegyvidék</div><div class="t">12–17 °C</div><div class="r">Zivatar 30-40%</div></div>
+      <div class="wx"><div class="d">Szombat · Bükk (Lillafüred)</div><div class="t">13–19 °C</div><div class="r">Zivatar 30%</div></div>
+      <div class="wx"><div class="d">Szombat éjjel</div><div class="t">9–12 °C</div><div class="r">Tiszta–felhős</div></div>
+      <div class="wx"><div class="d">Vasárnap · Mátra/Bükk</div><div class="t">16–22 °C</div><div class="r">Szárazabb</div></div>
+    </div>
+    <div class="alert"><b>Motoros szempont</b> — hegyvidéken (400-600 m) délután gyakori a zivatar. <b>Esővédő ruha kötelező!</b> Reggel 10-12 °C lehet, átmeneti kesztyű ajánlott.</div>
+    <a class="btn ghost only-B" href="https://www.meteoblue.com/hu/weather/week/banska-bystrica_szlov%c3%a1kia_3061186" target="_blank">MeteoBlue (SK) ↗</a>
+    <a class="btn ghost only-A" href="https://www.meteoblue.com/hu/weather/week/miskolc_magyarorsz%c3%a1g_717582" target="_blank">MeteoBlue (Miskolc) ↗</a>
+  </div>
+</details>
+
+<!-- SHARED: Kockázatok -->
+<details class="sec">
+  <summary><span class="icon">⚠️</span> Kockázatok és mérséklés</summary>
+  <div class="body">
+    <div class="risk">
+      <div class="high"><h4>🌩 Hegyi zivatar (magas)</h4><p>Felvidéken és Bükkben délután konvektív zivatarok. Ha a radaron vihar — pihenő kávézóban.</p></div>
+      <div class="med"><h4>🦌 Vadveszély (közepes)</h4><p>Erdős szakaszokon (SK Selmecbánya, HU Bükk) őzek. Alkonyatkor lassabb tempó.</p></div>
+      <div class="med only-B"><h4>⛽ Tankolás SK-ban (közepes)</h4><p>Kis-Kárpátok alatt ritkás kút. Zólyomban/Besztercebányán tankolj teliig.</p></div>
+      <div class="med only-A"><h4>⛽ Tankolás Cserhát-Mátra (közepes)</h4><p>Alsótold-Galyatető szakaszon nincs kút. Pásztóban tankolj teliig.</p></div>
+      <div class="low only-B"><h4>🛂 Határ (alacsony)</h4><p>Schengen — nincs ellenőrzés. Forgalmi + jogosítvány. Zöldkártya ajánlott.</p></div>
+      <div class="low only-B"><h4>🛣 SK matrica (alacsony)</h4><p><b>Motorokra NEM kell</b> szlovák autópálya-matrica! Klasszikus tévhit.</p></div>
+      <div class="med"><h4>😴 Fáradás 2. napon</h4><p>Ne siessetek, 60-90 percenként szünet. Mindkét opciónál valós.</p></div>
+    </div>
+  </div>
+</details>
+
+<!-- SHARED: Checklist -->
+<details class="sec">
+  <summary><span class="icon">✅</span> Csomagolási checklist <span class="hint">· <span id="checkhint">0 / 0</span></span></summary>
+  <div class="body">
+    <div class="lead">Pipáld ki amit betettél — session alatt megmarad. Mindkét opcióra ugyanaz a lista.</div>
+    <ul class="check" id="checklist">
+      <li class="cat">Papírok & okmányok</li>
+      <li><input type="checkbox" id="c1"><label for="c1">Motoros jogosítvány</label></li>
+      <li><input type="checkbox" id="c2"><label for="c2">Forgalmi engedély</label></li>
+      <li><input type="checkbox" id="c3"><label for="c3">Zöldkártya (biztosító)</label></li>
+      <li><input type="checkbox" id="c4"><label for="c4">Személyi / útlevél</label></li>
+      <li><input type="checkbox" id="c5"><label for="c5">TAJ kártya</label></li>
+      <li><input type="checkbox" id="c6"><label for="c6">Készpénz (EUR + HUF) + bankkártya</label></li>
+
+      <li class="cat">Motoros felszerelés</li>
+      <li><input type="checkbox" id="c10"><label for="c10">Sisak</label></li>
+      <li><input type="checkbox" id="c11"><label for="c11">Motoros dzseki (protektoros)</label></li>
+      <li><input type="checkbox" id="c12"><label for="c12">Motoros nadrág</label></li>
+      <li><input type="checkbox" id="c13"><label for="c13">Bakancs / csizma</label></li>
+      <li><input type="checkbox" id="c14"><label for="c14">Kesztyű nyári + átmeneti</label></li>
+      <li><input type="checkbox" id="c15"><label for="c15">Esővédő ruha (kabát+nadrág)</label></li>
+      <li><input type="checkbox" id="c16"><label for="c16">Nyakmelegítő / buff</label></li>
+      <li><input type="checkbox" id="c17"><label for="c17">Napszemüveg</label></li>
+
+      <li class="cat">Ruházat éjszakára</li>
+      <li><input type="checkbox" id="c20"><label for="c20">Póló + fehérnemű</label></li>
+      <li><input type="checkbox" id="c21"><label for="c21">Pulóver (estére)</label></li>
+      <li><input type="checkbox" id="c22"><label for="c22">Rövidnadrág / tréning</label></li>
+      <li><input type="checkbox" id="c23"><label for="c23">Zokni 2 pár</label></li>
+      <li><input type="checkbox" id="c24"><label for="c24">Papucs</label></li>
+      <li><input type="checkbox" id="c25"><label for="c25">Tisztálkodás</label></li>
+
+      <li class="cat">Motor karbantartás</li>
+      <li><input type="checkbox" id="c30"><label for="c30">Szerszámkészlet</label></li>
+      <li><input type="checkbox" id="c31"><label for="c31">Defektjavító</label></li>
+      <li><input type="checkbox" id="c32"><label for="c32">Lánckenő</label></li>
+      <li><input type="checkbox" id="c33"><label for="c33">Nyomásmérő</label></li>
+      <li><input type="checkbox" id="c34"><label for="c34">Pótkulcs</label></li>
+
+      <li class="cat">Elsősegély</li>
+      <li><input type="checkbox" id="c40"><label for="c40">Elsősegély csomag</label></li>
+      <li><input type="checkbox" id="c41"><label for="c41">Ibuprofen / aszpirin</label></li>
+      <li><input type="checkbox" id="c42"><label for="c42">Ragtapasz, géz</label></li>
+      <li><input type="checkbox" id="c43"><label for="c43">Személyes gyógyszerek</label></li>
+      <li><input type="checkbox" id="c44"><label for="c44">Fényvisszaverő mellény</label></li>
+
+      <li class="cat">Elektronika</li>
+      <li><input type="checkbox" id="c50"><label for="c50">Telefon + töltő</label></li>
+      <li><input type="checkbox" id="c51"><label for="c51">Powerbank</label></li>
+      <li><input type="checkbox" id="c52"><label for="c52">Telefontartó + USB töltés</label></li>
+      <li><input type="checkbox" id="c53"><label for="c53">Bluetooth headset</label></li>
+      <li><input type="checkbox" id="c54"><label for="c54">Actioncam + akku</label></li>
+      <li><input type="checkbox" id="c55"><label for="c55">Offline Google Maps</label></li>
+
+      <li class="cat">Egyéb</li>
+      <li><input type="checkbox" id="c60"><label for="c60">Víz (0.5L)</label></li>
+      <li><input type="checkbox" id="c61"><label for="c61">Snack</label></li>
+      <li><input type="checkbox" id="c62"><label for="c62">Napkrém</label></li>
+      <li><input type="checkbox" id="c63"><label for="c63">Vízálló táska</label></li>
+      <li><input type="checkbox" id="c64"><label for="c64">Mini pénztárca</label></li>
+    </ul>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="pcount"><span id="done">0</span> / <span id="total2">0</span> kész</div>
+  </div>
+</details>
+
+<!-- Költségbecslés -->
+<details class="sec">
+  <summary><span class="icon">💰</span> Költségbecslés <span class="hint">· 3 fő alap, 5 fő maximum</span></summary>
+  <div class="body">
+    <div class="grid-2">
+      <div class="day-card only-A" style="border-left:4px solid var(--opA);display:none">
+        <h3>🇭🇺 Opció A · 3 fő</h3>
+        <ol class="route" style="margin-top:6px">
+          <li><div class="place">Szállás Palota Hotel (1 éj)</div><div class="meta">~50-80 000 Ft</div></li>
+          <li><div class="place">Vacsora + reggeli</div><div class="meta">~25-40 000 Ft</div></li>
+          <li><div class="place">Üzemanyag (~480 km × 3 motor)</div><div class="meta">~60-75 000 Ft</div></li>
+          <li><div class="place">Egyéb (kávé, belépők)</div><div class="meta">~15-25 000 Ft</div></li>
+          <li><div class="place"><b>Összesen</b></div><div class="meta"><b>~150-220 000 Ft · fejenként ~50-73 000 Ft</b></div></li>
+        </ol>
+      </div>
+      <div class="day-card only-B" style="border-left:4px solid var(--opB);display:none">
+        <h3>🇸🇰 Opció B · 3 fő</h3>
+        <ol class="route" style="margin-top:6px">
+          <li><div class="place">Szállás KISKULACS (1 éj)</div><div class="meta">~30-40 000 Ft</div></li>
+          <li><div class="place">Vacsora + reggeli</div><div class="meta">~25-35 000 Ft</div></li>
+          <li><div class="place">Üzemanyag (~560 km × 3 motor)</div><div class="meta">~70-85 000 Ft</div></li>
+          <li><div class="place">Egyéb (kávé, ebéd SK)</div><div class="meta">~20-30 000 Ft</div></li>
+          <li><div class="place"><b>Összesen</b></div><div class="meta"><b>~145-190 000 Ft · fejenként ~48-63 000 Ft</b></div></li>
+        </ol>
+      </div>
+      <div class="day-card" style="border-left:4px solid #eab308">
+        <h3>⏫ 5 főre (ha mindenki jön)</h3>
+        <p style="color:var(--muted);font-size:13px">Szállás + vacsora ~60%-kal nő, üzemanyag arányosan. <b>Fejenkénti költség enyhén csökken</b> (szállás/ételskála miatt).</p>
+        <div class="day-stats">
+          <div><strong>Opció A</strong>~45-65 e Ft/fő</div>
+          <div><strong>Opció B</strong>~46-61 e Ft/fő</div>
+        </div>
+      </div>
+    </div>
+    <div class="alert"><b>Régi referencia</b> — a 3 napos Őrség tervnél ~65-71 e Ft/fő jött ki. Ez a 2 napos verzió 1 éjszakával kevesebb, így kicsit olcsóbb.</div>
+  </div>
+</details>
+
+<!-- Next Steps -->
+<details class="sec" open>
+  <summary><span class="icon">📋</span> Next Steps — mit csinálj most</summary>
+  <div class="body">
+    <ol class="next">
+      <li><span class="n">1</span><div><b>Opció döntés Petivel (ma-holnap)</b><em>Zsolt preferálja Opció B-t (SK). Peti rábólint? Egyeztetni.</em></div></li>
+      <li><span class="n">2</span><div><b>KISKULACS megerősítése (Opció B esetén)</b><em>Hol van pontosan? Salgótarjáni a tippem, Peti erősítse meg</em></div></li>
+      <li><span class="n">3</span><div><b>Csapat véglegesítés (jövő hét)</b><em>Bizonytalan résztvevők visszaszólása május 20-ig</em></div></li>
+      <li><span class="n">4</span><div><b>Szállás foglalás</b><em>Opció B: KISKULACS +36 32 412 026 · Opció A: Palota Hotel +36 46 331 411</em></div></li>
+      <li><span class="n">5</span><div><b>Motor szerviz (2 héttel előtte)</b><em>Olaj, lánc, gumi, fék, világítás — mindenki a sajáton</em></div></li>
+      <li><span class="n">6</span><div><b>Zöldkártya (1 héttel előtte)</b><em>Biztosítótól online, díjmentes</em></div></li>
+      <li><span class="n">7</span><div><b>Google Maps offline letöltés</b><em>Opció B: Szlovákia dél + Nógrád · Opció A: Cserhát + Mátra + Bükk</em></div></li>
+      <li><span class="n">8</span><div><b>Bluetooth headset párosítás</b><em>Mindenki egymással — csoportos kommunikáció</em></div></li>
+      <li><span class="n">9</span><div><b>Időjárás check (indulás előtt 2x)</b><em>Este + reggel — ha 60%+ zivatar, korábbra indulás</em></div></li>
+      <li><span class="n">10</span><div><b>Indulás reggel (05-30, 07:45)</b><em>Tank teli, gumi nyomás, csekklista ellenőrizve, headset live</em></div></li>
+    </ol>
+  </div>
+</details>
+
+<footer>
+  Készült 2026. április 18-án · 2 opciós verzió · Opció A adatai Peti Google Maps linkjéből dekódolva<br>
+  Peti üzenetek + Totalbike.hu + Rhinotours + MeteoBlue · A KISKULACS pontos helyszínét Petivel egyeztetni!
+</footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ======= ROUTE DATA =======
+const routes = {
+  A: {
+    d1: [
+      {n:'Diósd (Tengelic u.)', ll:[47.4086, 18.9566], tip:'Indulás ~08:00'},
+      {n:'Rád', ll:[47.7947, 19.2207], tip:'Cserhát belépő · ~60 km'},
+      {n:'Mohora', ll:[47.9938, 19.3406], tip:'Cserhát belső · ~85 km'},
+      {n:'Alsótold 📸', ll:[47.9517, 19.5975], tip:'Palócok · ~110 km'},
+      {n:'Pásztó ⛽🍽', ll:[47.9241, 19.7060], tip:'Ebéd, tankolás · ~125 km'},
+      {n:'Galyatető 📸', ll:[47.9137, 19.9201], tip:'965 m · ~155 km'},
+      {n:'Kékestető 📸', ll:[47.8708, 20.0106], tip:'Mo. legmagasabb 1014 m · ~170 km'},
+      {n:'Recsk', ll:[47.9355, 20.1090], tip:'Szép leereszkedés · ~190 km'},
+      {n:'Felsőtárkány 📸', ll:[47.9719, 20.4138], tip:'Bükk kapu · ~225 km'},
+      {n:'Lillafüred 🛏', ll:[48.1050, 20.6226], tip:'Érkezés, Palotaszálló · 250 km'}
+    ],
+    d2: [
+      {n:'Lillafüred', ll:[48.1050, 20.6226], tip:'Reggeli, indulás ~09:00'},
+      {n:'Bükk-Bánkút 📸', ll:[48.1333, 20.5333], tip:'Erdei szerpentin · ~25 km'},
+      {n:'Szilvásvárad 📸', ll:[48.0997, 20.3975], tip:'Lipicai ménes · ~60 km'},
+      {n:'Eger 🍽', ll:[47.9025, 20.3772], tip:'Ebéd a várnál · ~95 km'},
+      {n:'Gyöngyös ⛽', ll:[47.7819, 19.9297], tip:'Tankolás · ~130 km'},
+      {n:'M3 felhajtó', ll:[47.6, 19.7], tip:'Autópálya · ~150 km'},
+      {n:'Diósd 🏁', ll:[47.4117, 18.9445], tip:'Érkezés · 230 km'}
+    ]
+  },
+  B: {
+    d1: [
+      {n:'Diósd', ll:[47.4117, 18.9445], tip:'Indulás ~08:00'},
+      {n:'Esztergom', ll:[47.7886, 18.7414], tip:'Duna-parti út'},
+      {n:'Párkány (Štúrovo) 🛂', ll:[47.7943, 18.7151], tip:'SK belépés'},
+      {n:'Levice (Léva) ⛽', ll:[48.2170, 18.6064], tip:'Tankolás · ~110 km'},
+      {n:'Banská Štiavnica 📸', ll:[48.4580, 18.8931], tip:'UNESCO · ~150 km'},
+      {n:'Zvolen (Zólyom)', ll:[48.5762, 19.1281], tip:'Szerpentinek · ~180 km'},
+      {n:'Banská Bystrica 🍽', ll:[48.7362, 19.1463], tip:'Ebéd ~13:30 · ~210 km'},
+      {n:'Krupina ⛽', ll:[48.3508, 19.0614], tip:'Utolsó SK tank · ~240 km'},
+      {n:'Balassagyarmat 🛂', ll:[48.0820, 19.2951], tip:'Vissza HU · ~265 km'},
+      {n:'Salgótarján — KISKULACS 🛏', ll:[48.0983, 19.8001], tip:'Szállás · 291 km'}
+    ],
+    d2: [
+      {n:'Salgótarján', ll:[48.0983, 19.8001], tip:'Reggeli, indulás ~09:00'},
+      {n:'Hollókő 📸', ll:[47.9980, 19.5958], tip:'UNESCO · ~30 km'},
+      {n:'Kékestető 📸', ll:[47.8728, 20.0128], tip:'1014 m · ~70 km'},
+      {n:'Eger', ll:[47.9025, 20.3772], tip:'Kávé, vár · ~120 km'},
+      {n:'Lillafüred 📸 (opc.)', ll:[48.1022, 20.6131], tip:'~165 km'},
+      {n:'Gyöngyös ⛽', ll:[47.7819, 19.9297], tip:'Tankolás · ~200 km'},
+      {n:'Diósd 🏁', ll:[47.4117, 18.9445], tip:'Érkezés · 273 km'}
+    ]
+  }
+};
+
+// ======= MAP =======
+let map = null;
+let mapLayers = [];
+
+function initMap(){
+  if(typeof L === 'undefined'){
+    renderFallback();
+    return;
+  }
+  try {
+    map = L.map('map', {scrollWheelZoom:false}).setView([48.0, 19.5], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution:'&copy; OpenStreetMap',
+      maxZoom:18
+    }).addTo(map);
+    map.on('focus', ()=>map.scrollWheelZoom.enable());
+    map.on('blur', ()=>map.scrollWheelZoom.disable());
+    drawRoute('B'); // default
+  } catch(e){
+    console.error(e);
+    renderFallback();
+  }
+}
+
+function drawRoute(opt){
+  if(!map) return;
+  // clear existing
+  mapLayers.forEach(l=>map.removeLayer(l));
+  mapLayers = [];
+  const r = routes[opt];
+  const draw = (pts, color, label) => {
+    const latlngs = pts.map(p=>p.ll);
+    const line = L.polyline(latlngs, {color, weight:5, opacity:.85}).addTo(map);
+    mapLayers.push(line);
+    pts.forEach((p,i)=>{
+      const icon = L.divIcon({
+        className:'',
+        html:`<div style="background:${color};color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.5);border:2px solid #fff">${i+1}</div>`,
+        iconSize:[28,28], iconAnchor:[14,14]
+      });
+      const m = L.marker(p.ll, {icon}).addTo(map).bindPopup(`<b>${label} — ${p.n}</b><br>${p.tip}`);
+      mapLayers.push(m);
+    });
+  };
+  draw(r.d1, '#0ea5e9', 'Nap 1');
+  draw(r.d2, '#f97316', 'Nap 2');
+  const all = [...r.d1, ...r.d2].map(p=>p.ll);
+  map.fitBounds(L.latLngBounds(all), {padding:[30,30]});
+}
+
+function renderFallback(){
+  const mapEl = document.getElementById('map');
+  mapEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted)">
+    Leaflet nem elérhető offline. Nyisd meg az útvonalakat Google Maps-ben:<br><br>
+    <a class="btn" href="https://www.google.com/maps/dir/Tengelic+utca/Rád/Mohora/Alsótold/Pásztó/Galyatető/Kékestető/Recsk/Felsőtárkány/Lillafüred" target="_blank">🇭🇺 Opció A · Google Maps ↗</a>
+    <a class="btn" href="https://www.google.com/maps/dir/Diósd/Esztergom/Banská+Štiavnica/Zvolen/Banská+Bystrica/Krupina/Balassagyarmat/Salgótarján" target="_blank">🇸🇰 Opció B · Google Maps ↗</a>
+  </div>`;
+  mapEl.style.height = 'auto';
+  mapEl.style.padding = '10px';
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', ()=>setTimeout(initMap, 100));
+} else {
+  setTimeout(initMap, 100);
+}
+window.addEventListener('error', (e)=>{
+  if(e.message && e.message.includes('L is not defined')){
+    renderFallback();
+  }
+}, true);
+
+// ======= OPTION SWITCH =======
+function switchOption(opt){
+  document.body.classList.remove('mode-A','mode-B');
+  document.body.classList.add('mode-'+opt);
+  document.querySelectorAll('.opt-btn').forEach(b=>b.classList.toggle('active', b.dataset.opt===opt));
+  document.querySelectorAll('.summary').forEach(s=>s.classList.toggle('active', s.id==='sum-'+opt));
+  // Show/hide option-specific sections
+  document.querySelectorAll('.opt-only').forEach(el=>{
+    el.style.display = el.classList.contains('opt-'+opt) ? '' : 'none';
+  });
+  document.querySelectorAll('.only-A').forEach(el=>el.style.display = opt==='A'?'':'none');
+  document.querySelectorAll('.only-B').forEach(el=>el.style.display = opt==='B'?'':'none');
+  // Update map
+  const lbl = document.getElementById('mode-label');
+  if(lbl) lbl.textContent = 'Opció ' + opt;
+  drawRoute(opt);
+}
+document.querySelectorAll('.opt-btn').forEach(b=>{
+  b.addEventListener('click', ()=>switchOption(b.dataset.opt));
+});
+switchOption('B'); // default
+
+// ======= EXPAND/COLLAPSE ALL =======
+function toggleAll(open){
+  document.querySelectorAll('details.sec').forEach(d=>{
+    if(d.classList.contains('opt-only')){
+      if(d.style.display === 'none') return;
+    }
+    d.open = open;
+  });
+}
+
+// ======= CHECKLIST =======
+const boxes = document.querySelectorAll('#checklist input[type=checkbox]');
+const total2 = document.getElementById('total2');
+const done = document.getElementById('done');
+const bar = document.getElementById('bar');
+const checkhint = document.getElementById('checkhint');
+if(total2){
+  total2.textContent = boxes.length;
+  const update = ()=>{
+    const n = [...boxes].filter(b=>b.checked).length;
+    done.textContent = n;
+    bar.style.width = (n/boxes.length*100)+'%';
+    checkhint.textContent = n+' / '+boxes.length;
+    boxes.forEach(b=>{
+      const lbl = b.nextElementSibling;
+      if(lbl) lbl.classList.toggle('checked', b.checked);
+    });
+  };
+  boxes.forEach(b=>b.addEventListener('change', update));
+  update();
+}
+</script>
+</body>
+</html>
