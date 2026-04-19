@@ -1882,17 +1882,22 @@ const ACCENTS = {
   moss:   { name:'Moss zöld',          color:'#2DD4A4', color2:'#5FE0B8' },
 };
 
+// Safe storage — many sandboxed previews (and privacy modes) throw SecurityError
+// when accessing window.localStorage, so everything must be guarded.
+const safeStore = {
+  get(k){ try { return window.localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { window.localStorage.setItem(k,v); } catch(e){} },
+};
+
 function App(){
   const [tweaks, setTweaks] = React.useState(()=>{
-    try { return JSON.parse(localStorage.getItem('mr_tweaks')) || TWEAKS; }
+    try { return JSON.parse(safeStore.get('mr_tweaks')) || TWEAKS; }
     catch(e){ return TWEAKS; }
   });
   const [tweaksOpen, setTweaksOpen] = React.useState(false);
-  const [fullscreen, setFullscreen] = React.useState(()=>{
-    try { return localStorage.getItem('mr_fs') === '1'; } catch(e){ return false; }
-  });
+  const [fullscreen, setFullscreen] = React.useState(()=> safeStore.get('mr_fs') === '1');
   const [screen, setScreen] = React.useState(()=>
-    localStorage.getItem('mr_screen') || tweaks.startScreen || 'home');
+    safeStore.get('mr_screen') || tweaks.startScreen || 'home');
   const [wizStep, setWizStep] = React.useState(0);
   const [wizData, setWizData] = React.useState({hours:4, type:'asphalt', who:'solo'});
   const [lang, setLang] = React.useState(false);
@@ -1903,9 +1908,9 @@ function App(){
     MR.color.sunset = a.color; MR.color.sunset2 = a.color2;
   }, [tweaks.accent]);
 
-  React.useEffect(()=>{ try{ localStorage.setItem('mr_screen', screen); }catch(e){} }, [screen]);
-  React.useEffect(()=>{ try{ localStorage.setItem('mr_tweaks', JSON.stringify(tweaks)); }catch(e){} }, [tweaks]);
-  React.useEffect(()=>{ try{ localStorage.setItem('mr_fs', fullscreen?'1':'0'); }catch(e){} }, [fullscreen]);
+  React.useEffect(()=>{ safeStore.set('mr_screen', screen); }, [screen]);
+  React.useEffect(()=>{ safeStore.set('mr_tweaks', JSON.stringify(tweaks)); }, [tweaks]);
+  React.useEffect(()=>{ safeStore.set('mr_fs', fullscreen?'1':'0'); }, [fullscreen]);
 
   const setTweak = (patch) => setTweaks({...tweaks, ...patch});
 
